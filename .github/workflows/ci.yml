@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - name: Host tests (Linux, under xvfb)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:host
+      - name: Host tests (Windows)
+        if: runner.os == 'Windows'
+        run: npm run test:host
+      - run: npm run package
+      - uses: actions/upload-artifact@v7
+        with:
+          name: taskrunner-${{ matrix.os }}
+          path: .output/*.vsix
