@@ -2,9 +2,10 @@
   "name": "vscode-task-runner",
   "displayName": "VSCode Task Runner",
   "description": "A sidebar grid of big, labelled buttons that run your tasks and shell commands.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "Rathinosk",
   "license": "MIT",
+  "icon": "media/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/rathinosk/TaskRunner.git"
