@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Task Runner buttons",
+  "description": "Buttons shown in the Task Runner sidebar, in the order listed.",
+  "type": "object",
+  "required": [
+    "buttons"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "buttons": {
+      "type": "array",
+      "description": "The buttons, in the order shown.",
+      "items": {
+        "$ref": "#/definitions/button"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "button": {
+      "type": "object",
+      "description": "A button that runs a task from tasks.json (or a task provider), runs a shell command, or opens a group of more buttons.",
+      "oneOf": [
+        {
+          "required": [
+            "task"
+          ]
+        },
+        {
+          "required": [
+            "command"
+          ]
+        },
+        {
+          "required": [
+            "group",
+            "buttons"
+          ]
+        }
+      ],
+      "properties": {
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Makes this a group: a folder of buttons. The name shown under its icon. Needs \"buttons\"; \"label\", \"confirm\" and the run keys do not apply."
+        },
+        "buttons": {
+          "type": "array",
+          "description": "Only for \"group\". The buttons inside it, which may be groups too.",
+          "items": {
+            "$ref": "#/definitions/button"
+          }
+        },
+        "task": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Label of the task to run, as listed in Terminal > Run Task."
+        },
+        "source": {
+          "type": "string",
+          "description": "Only for \"task\". Tells same-named tasks apart: \"Workspace\" for tasks.json, or a provider such as \"npm\"."
+        },
+        "folder": {
+          "type": "string",
+          "description": "Only for \"task\". Workspace folder name, in a multi-root workspace."
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Shell command to run. Variables such as ${workspaceFolder} are resolved by VS Code. In JSON a backslash starts an escape: write a Windows path as .\\scripts\\build.ps1 (doubled) or use forward slashes, because \t, \n, \r, \b and \f silently become control characters."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Only for \"command\". Working directory; defaults to the workspace folder. Backslashes must be doubled, or use forward slashes."
+        },
+        "env": {
+          "type": "object",
+          "description": "Only for \"command\". Extra environment variables.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "shell": {
+          "type": "string",
+          "description": "Only for \"command\". Shell executable to use instead of the default, e.g. \"bash\"."
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,64}$",
+          "description": "Stable identifier, unique in this file, groups' children included. Optional; derived from what the button runs."
+        },
+        "label": {
+          "type": "string",
+          "description": "Text under the icon. Defaults to the task label or the command."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Codicon name (e.g. \"tools\", \"beaker\", \"rocket\"), a workspace-relative image (\"./icons/build.svg\" or \".png\"), or an emoji. Defaults by task group; a group defaults to \"folder\"."
+        },
+        "tooltip": {
+          "type": "string",
+          "description": "Hover text. Defaults to what the button will run."
+        },
+        "confirm": {
+          "type": "boolean",
+          "description": "Ask before running (for deploy-style buttons).",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

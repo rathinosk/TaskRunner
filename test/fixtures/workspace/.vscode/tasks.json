@@ -1,0 +1,21 @@
+{
+  // Fixture for host tests: comments and trailing commas are legal here.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Zed echo",
+      "type": "shell",
+      "command": "echo zed ${workspaceFolder}",
+    },
+    {
+      "label": "Alpha echo", /* written second, listed second */
+      "type": "shell",
+      "command": "echo alpha",
+      "group": "build",
+    },
+    {
+      "label": "Both",
+      "dependsOn": ["Zed echo", "Alpha echo"],
+    },
+  ],
+}

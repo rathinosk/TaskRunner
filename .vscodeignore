@@ -1,0 +1,11 @@
+**
+!package.json
+!LICENSE
+!README.md
+!THIRD-PARTY-NOTICES.md
+!dist/extension.js
+!media/taskrunner.svg
+!media/grid.css
+!media/webview.js
+!media/codicons/**
+!schemas/**

@@ -1,0 +1,268 @@
+{
+  "name": "vscode-task-runner",
+  "displayName": "VSCode Task Runner",
+  "description": "A sidebar grid of big, labelled buttons that run your tasks and shell commands.",
+  "version": "0.0.1",
+  "publisher": "Rathinosk",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rathinosk/TaskRunner.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rathinosk/TaskRunner/issues"
+  },
+  "homepage": "https://github.com/rathinosk/TaskRunner#readme",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In an untrusted workspace the buttons are shown but nothing runs, and icons from workspace files are not loaded."
+    }
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "taskrunner",
+          "title": "Task Runner",
+          "icon": "media/taskrunner.svg"
+        }
+      ]
+    },
+    "views": {
+      "taskrunner": [
+        {
+          "type": "webview",
+          "id": "taskrunner.grid",
+          "name": "Buttons"
+        }
+      ]
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": "**/.vscode/taskrunner.json",
+        "url": "./schemas/taskrunner.schema.json"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "taskrunner.add",
+          "when": "view == taskrunner.grid",
+          "group": "navigation@1"
+        },
+        {
+          "command": "taskrunner.openConfig",
+          "when": "view == taskrunner.grid",
+          "group": "navigation@2"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "taskrunner.renameButton",
+          "when": "webviewId == 'taskrunner.grid' && webviewSection == 'button'",
+          "group": "1_edit@1"
+        },
+        {
+          "command": "taskrunner.changeIcon",
+          "when": "webviewId == 'taskrunner.grid' && webviewSection == 'button'",
+          "group": "1_edit@2"
+        },
+        {
+          "command": "taskrunner.editInFile",
+          "when": "webviewId == 'taskrunner.grid' && webviewSection == 'button'",
+          "group": "2_file@1"
+        },
+        {
+          "command": "taskrunner.removeButton",
+          "when": "webviewId == 'taskrunner.grid' && webviewSection == 'button'",
+          "group": "3_remove@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "taskrunner.renameButton",
+          "when": "false"
+        },
+        {
+          "command": "taskrunner.changeIcon",
+          "when": "false"
+        },
+        {
+          "command": "taskrunner.editInFile",
+          "when": "false"
+        },
+        {
+          "command": "taskrunner.removeButton",
+          "when": "false"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "taskrunner.ping",
+        "title": "Task Runner: Ping"
+      },
+      {
+        "command": "taskrunner.showTasks",
+        "title": "Task Runner: Show Tasks"
+      },
+      {
+        "command": "taskrunner.openConfig",
+        "title": "Task Runner: Open Config",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "taskrunner.createConfig",
+        "title": "Task Runner: Create Config"
+      },
+      {
+        "command": "taskrunner.pickTasks",
+        "title": "Task Runner: Pick Tasks for the Grid"
+      },
+      {
+        "command": "taskrunner.add",
+        "title": "Add to the Grid...",
+        "category": "Task Runner",
+        "icon": "$(add)"
+      },
+      {
+        "command": "taskrunner.renameButton",
+        "title": "Rename...",
+        "category": "Task Runner"
+      },
+      {
+        "command": "taskrunner.changeIcon",
+        "title": "Change Icon...",
+        "category": "Task Runner"
+      },
+      {
+        "command": "taskrunner.editInFile",
+        "title": "Edit in File",
+        "category": "Task Runner"
+      },
+      {
+        "command": "taskrunner.removeButton",
+        "title": "Remove from Grid",
+        "category": "Task Runner"
+      }
+    ],
+    "configuration": {
+      "title": "Task Runner",
+      "properties": {
+        "taskRunner.iconSize": {
+          "type": "integer",
+          "default": 48,
+          "enum": [
+            32,
+            40,
+            48,
+            56,
+            64,
+            72,
+            80,
+            88,
+            96,
+            104,
+            112,
+            120,
+            128
+          ],
+          "enumItemLabels": [
+            "32 px",
+            "40 px",
+            "48 px",
+            "56 px",
+            "64 px",
+            "72 px",
+            "80 px",
+            "88 px",
+            "96 px",
+            "104 px",
+            "112 px",
+            "120 px",
+            "128 px"
+          ],
+          "markdownDescription": "Size of the button icons in pixels, from 32 to 128."
+        },
+        "taskRunner.showLabels": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show each button's label under its icon. When off, the name stays in the tooltip and for screen readers."
+        },
+        "taskRunner.columns": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "enumItemLabels": [
+            "Auto (fit the sidebar width)",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "markdownDescription": "Number of columns in the grid (1 to 12), or auto to fit as many as the sidebar width allows."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "package": "node -e \"require('fs').mkdirSync('.output',{recursive:true})\" && node esbuild.mjs --production && vsce package --out .output/taskrunner.vsix",
+    "typecheck": "tsc -p . --noEmit && tsc -p tsconfig.webview.json --noEmit",
+    "compile-tests": "tsc -p tsconfig.test.json",
+    "test:unit": "npm run compile-tests && mocha \"out/test/core/**/*.test.js\" \"out/test/webview/**/*.test.js\"",
+    "test:host": "npm run build && npm run compile-tests && node out/test/host/runTest.js",
+    "test": "npm run typecheck && npm run test:unit && npm run test:host"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.43",
+    "@types/vscode": "^1.90.0",
+    "@vscode/codicons": "^0.0.46-24",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "mocha": "^12.0.3",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
+  },
+  "overrides": {
+    "@azure/msal-node": "^7.1.1"
+  }
+}
