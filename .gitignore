@@ -1,0 +1,9 @@
+node_modules
+dist
+out
+*.vsix
+.vscode-test
+media/codicons
+media/webview.js
+media/webview.js.map
+.output
