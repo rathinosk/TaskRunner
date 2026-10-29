@@ -1,16 +1,16 @@
 # Task Runner
 
-A VS Code sidebar grid of big, labelled buttons that run your tasks and shell commands with one click.
+A VS Code sidebar grid of big, labelled buttons that run your tasks, shell commands and VS Code commands with one click.
 
 ![Task Runner sidebar showing a grid of icon buttons next to taskrunner.json](.images/taskrunner-screenshot.png)
 
 ## Features
 
-- **One-click buttons.** Each button runs a task from `tasks.json` (or any task provider, such as npm) or a plain shell command.
+- **One-click buttons.** Each button runs a task from `tasks.json` (or any task provider, such as npm), a plain shell command or any VS Code command (with optional arguments).
 - **Big, readable icons.** Icons range from 32 to 128 px, with optional labels underneath.
 - **Flexible icons.** Use a [Codicon](https://microsoft.github.io/vscode-codicons/dist/codicon.html) name, a workspace image (`.svg` or `.png`) or an emoji.
 - **Groups.** Nest buttons in folder-like groups to keep the grid tidy.
-- **Run status.** A check mark shows on buttons whose last run succeeded.
+- **Run status.** A task or shell button shows a spinner while it runs, then a check mark or an error badge for how its last run ended.
 - **Confirm before running.** Mark deploy-style buttons with `"confirm": true`.
 - **Edit in the UI or in the file.** Add buttons, rename them, change icons, remove them and reorder them by drag and drop. Right-click a button for the menu. Everything is stored in a plain JSON file, and your comments are kept when the extension edits it.
 - **Schema and completion.** `.vscode/taskrunner.json` is validated against a bundled JSON schema.
@@ -27,13 +27,16 @@ Buttons live in `.vscode/taskrunner.json`, in the order shown:
 
 ```jsonc
 {
-  "$schema": "../schemas/taskrunner.schema.json",
   "buttons": [
     // Run a task from tasks.json
     { "task": "Build", "source": "Workspace", "icon": "tools" },
 
     // Run a shell command
     { "command": "npm start", "label": "Run", "icon": "play" },
+
+    // Run a VS Code command, with an optional argument as in keybindings.json
+    { "vscode": "workbench.action.files.saveAll", "label": "Save all", "icon": "save-all" },
+    { "vscode": "editor.action.insertSnippet", "args": { "snippet": "// TODO: $0" }, "label": "TODO" },
 
     // Ask first
     { "command": "npm run deploy", "label": "Deploy", "icon": "rocket", "confirm": true },
@@ -53,7 +56,7 @@ Buttons live in `.vscode/taskrunner.json`, in the order shown:
 
 ### Button properties
 
-A button must have exactly one of `task`, `command`, or `group` with `buttons`.
+A button must have exactly one of `task`, `command`, `vscode`, or `group` with `buttons`.
 
 | Property | Applies to | Description |
 | --- | --- | --- |
@@ -64,11 +67,13 @@ A button must have exactly one of `task`, `command`, or `group` with `buttons`.
 | `cwd` | command | Working directory. Defaults to the workspace folder. |
 | `env` | command | Extra environment variables. |
 | `shell` | command | Shell executable to use instead of the default, e.g. `"bash"`. |
+| `vscode` | vscode | VS Code command id, as in `keybindings.json`. Anything in the Command Palette works; completion lists the ids. |
+| `args` | vscode | Argument for the command, as in `keybindings.json`: any JSON value, passed as written (`${...}` variables are not resolved). |
 | `group` | group | Group name. Requires `buttons`, which may contain more groups. |
-| `label` | all | Text under the icon. Defaults to the task label or the command. |
-| `icon` | all | Codicon name, workspace-relative image, or emoji. Defaults by task group; groups default to `folder`. |
+| `label` | all | Text under the icon. Defaults to the task label, the command, or the VS Code command's title. |
+| `icon` | all | Codicon name, workspace-relative image, or emoji. Defaults by task group; VS Code commands default to `symbol-event`, groups to `folder`. |
 | `tooltip` | all | Hover text. Defaults to what the button will run. |
-| `confirm` | task, command | Ask before running. Default `false`. |
+| `confirm` | task, command, vscode | Ask before running. Default `false`. |
 | `id` | all | Stable identifier, unique within the file. Derived automatically if omitted. |
 
 > **Windows paths in JSON:** a backslash starts an escape, so `\t` or `\b` silently turns into a control character. Write `.\\scripts\\build.ps1` or use forward slashes.
@@ -87,7 +92,7 @@ The full definition is in [schemas/taskrunner.schema.json](schemas/taskrunner.sc
 
 | Command | Description |
 | --- | --- |
-| Task Runner: Add to the Grid... | Add a task or command button. |
+| Task Runner: Add to the Grid... | Add a task, shell command, VS Code command or group. |
 | Task Runner: Pick Tasks for the Grid | Choose from your existing tasks. |
 | Task Runner: Open Config | Open `.vscode/taskrunner.json`. |
 | Task Runner: Create Config | Create a starter config file. |
