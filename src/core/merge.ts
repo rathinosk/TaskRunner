@@ -17,10 +17,15 @@ export interface ShellSpec {
   shell?: string;
 }
 
+export interface CommandSpec {
+  id: string;
+  args?: unknown;
+}
+
 export interface MergedButton extends Omit<ButtonView, 'icon' | 'run' | 'group' | 'parent'> {
   /** The icon as written (or the default); the host resolves it for display. */
   icon: string;
-  kind: 'task' | 'shell' | 'group';
+  kind: 'task' | 'shell' | 'command' | 'group';
   confirm: boolean;
   /** Where the button is written in its folder's taskrunner.json; edits address it by this. */
   path: JsonPath;
@@ -33,10 +38,13 @@ export interface MergedButton extends Omit<ButtonView, 'icon' | 'run' | 'group' 
   /** For `task` buttons that resolved: the task id to look up again at click time. */
   taskId?: string;
   shell?: ShellSpec;
+  vscodeCommand?: CommandSpec;
 }
 
 export interface MergeOptions {
   trusted: boolean;
+  /** Known VS Code command ids and their titles; when given, a command button not in it is missing. */
+  commands?: ReadonlyMap<string, string | undefined>;
 }
 
 /**
@@ -48,7 +56,14 @@ export function mergeButtons(configs: readonly FolderConfig[], tasks: readonly T
   const out: MergedButton[] = [];
   const add = (list: readonly ButtonConfig[], folder: string, parent: string | undefined): void => {
     for (const b of list) {
-      const built = b.kind === 'task' ? taskButton(b, folder, tasks) : b.kind === 'shell' ? shellButton(b, folder) : groupButton(b, folder);
+      const built =
+        b.kind === 'task'
+          ? taskButton(b, folder, tasks)
+          : b.kind === 'shell'
+            ? shellButton(b, folder)
+            : b.kind === 'command'
+              ? commandButton(b, folder, opts.commands)
+              : groupButton(b, folder);
       const merged: MergedButton = { ...built, configId: b.id };
       if (!opts.trusted && b.kind !== 'group') {
         merged.state = 'untrusted';
@@ -121,6 +136,30 @@ function shellButton(b: Extract<ButtonConfig, { kind: 'shell' }>, folder: string
     tooltip: b.tooltip ?? `Run: ${b.command}${b.cwd ? `\nIn: ${b.cwd}` : ''}${b.confirm ? '\nAsks before running.' : ''}`,
     state: 'ok',
     shell,
+  };
+}
+
+function commandButton(
+  b: Extract<ButtonConfig, { kind: 'command' }>,
+  folder: string,
+  commands: ReadonlyMap<string, string | undefined> | undefined,
+): Omit<MergedButton, 'configId'> {
+  const title = commands?.get(b.vscode);
+  const vscodeCommand: CommandSpec = { id: b.vscode, ...(b.args !== undefined ? { args: b.args } : {}) };
+  const base = { id: b.id, kind: 'command' as const, confirm: b.confirm, path: b.path, folder, label: b.label ?? title ?? b.vscode, vscodeCommand };
+  if (commands && !commands.has(b.vscode)) {
+    return {
+      ...base,
+      icon: b.icon ?? 'warning',
+      tooltip: b.tooltip ?? `Command "${b.vscode}" was not found. Check the id in taskrunner.json, or install the extension that provides it.`,
+      state: 'missing',
+    };
+  }
+  return {
+    ...base,
+    icon: b.icon ?? 'symbol-event',
+    tooltip: b.tooltip ?? `Run command: ${title ? `${title} (${b.vscode})` : b.vscode}${b.confirm ? '\nAsks before running.' : ''}`,
+    state: 'ok',
   };
 }
 

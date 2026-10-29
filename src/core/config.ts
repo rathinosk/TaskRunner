@@ -1,5 +1,5 @@
 // .vscode/taskrunner.json (ADR-0003): parse, validate and normalise. No `vscode` import.
-import { parseJsoncTree, positionAt, type JsonNode } from './jsonc';
+import { nodeValue, parseJsoncTree, positionAt, type JsonNode } from './jsonc';
 import { parseIcon } from './icons';
 import { isButtonId } from './protocol';
 
@@ -37,6 +37,15 @@ export interface ShellButtonConfig extends ButtonBase {
   shell?: string;
 }
 
+/** A VS Code command, run as a keybinding would run it (ADR-0007). */
+export interface CommandButtonConfig extends ButtonBase {
+  kind: 'command';
+  /** Command id, e.g. "workbench.action.files.saveAll". */
+  vscode: string;
+  /** Passed as the single first argument when present. */
+  args?: unknown;
+}
+
 /** A folder of buttons (ADR-0006). Runs nothing; clicking it opens it. */
 export interface GroupButtonConfig extends ButtonBase {
   kind: 'group';
@@ -45,7 +54,7 @@ export interface GroupButtonConfig extends ButtonBase {
   buttons: ButtonConfig[];
 }
 
-export type RunnableButtonConfig = TaskButtonConfig | ShellButtonConfig;
+export type RunnableButtonConfig = TaskButtonConfig | ShellButtonConfig | CommandButtonConfig;
 export type ButtonConfig = RunnableButtonConfig | GroupButtonConfig;
 
 /** Every button in the tree, groups before their children (the order of the file). */
@@ -77,7 +86,7 @@ export function emptyConfig(): TaskRunnerConfig {
   return { buttons: [] };
 }
 
-const BUTTON_KEYS = new Set(['id', 'group', 'buttons', 'task', 'source', 'folder', 'command', 'cwd', 'env', 'shell', 'label', 'icon', 'tooltip', 'confirm']);
+const BUTTON_KEYS = new Set(['id', 'group', 'buttons', 'task', 'source', 'folder', 'command', 'cwd', 'env', 'shell', 'vscode', 'args', 'label', 'icon', 'tooltip', 'confirm']);
 
 /** Parse and validate the text of a taskrunner.json. */
 export function parseConfig(text: string, opts: { codicons?: ReadonlySet<string> } = {}): ParsedConfig {
@@ -196,35 +205,38 @@ function readButton(
     return p.node.value;
   };
 
-  const isGroup = props.has('group');
-  const task = isGroup ? undefined : text('task');
-  const command = isGroup ? undefined : text('command');
-  if (isGroup) {
-    if (props.has('task') || props.has('command')) {
-      report('error', 'A button is a group, a task or a command, not more than one', path, node.offset);
-      ok = false;
-    }
-  } else if (props.has('task') && props.has('command')) {
-    report('error', 'A button has either "task" or "command", not both', path, node.offset);
+  const kinds = (['group', 'task', 'command', 'vscode'] as const).filter((k) => props.has(k));
+  if (kinds.length > 1) {
+    report('error', `A button has one of "task", "command", "vscode" or "group", not ${kinds.map((k) => `"${k}"`).join(' and ')}`, path, node.offset);
     ok = false;
-  } else if (!props.has('task') && !props.has('command')) {
-    report('error', 'A button needs "task" (a task label), "command" (a shell command) or "group" (a folder of buttons)', path, node.offset);
+  } else if (kinds.length === 0) {
+    report('error', 'A button needs "task" (a task label), "command" (a shell command), "vscode" (a VS Code command id) or "group" (a folder of buttons)', path, node.offset);
     ok = false;
   }
+  const kind = kinds.length === 1 ? kinds[0] : undefined;
+  const isGroup = kind === 'group';
+  const task = kind === 'task' ? text('task') : undefined;
+  const command = kind === 'command' ? text('command') : undefined;
+  const vscodeId = kind === 'vscode' ? text('vscode') : undefined;
 
-  const taskOnly = ['source', 'folder'];
-  const shellOnly = ['cwd', 'env', 'shell'];
+  // Keys that only apply to one kind; on another kind they are ignored.
+  const only: Record<string, readonly string[]> = { task: ['source', 'folder'], command: ['cwd', 'env', 'shell'], vscode: ['args'] };
   if (isGroup) {
-    for (const key of ['source', 'folder', 'cwd', 'env', 'shell', 'confirm', 'label']) {
+    for (const key of ['source', 'folder', 'cwd', 'env', 'shell', 'args', 'confirm', 'label']) {
       const p = props.get(key);
       if (p) report('warning', `"${key}" does not apply to a group and is ignored`, `${path}.${key}`, p.keyOffset);
     }
   } else if (props.has('buttons')) {
     report('warning', '"buttons" only applies to a group and is ignored', `${path}.buttons`, props.get('buttons')!.keyOffset);
   }
-  for (const key of isGroup ? [] : props.has('task') ? shellOnly : props.has('command') ? taskOnly : []) {
-    const p = props.get(key);
-    if (p) report('warning', `"${key}" only applies to ${props.has('task') ? '"command"' : '"task"'} buttons and is ignored`, `${path}.${key}`, p.keyOffset);
+  if (kind !== undefined && !isGroup) {
+    for (const [owner, keys] of Object.entries(only)) {
+      if (owner === kind) continue;
+      for (const key of keys) {
+        const p = props.get(key);
+        if (p) report('warning', `"${key}" only applies to "${owner}" buttons and is ignored`, `${path}.${key}`, p.keyOffset);
+      }
+    }
   }
 
   const common = {
@@ -291,6 +303,16 @@ function readButton(
       task,
       ...(source !== undefined ? { source } : {}),
       ...(folder !== undefined ? { folder } : {}),
+    };
+  } else if (vscodeId !== undefined) {
+    const argsProp = props.get('args');
+    const args = argsProp ? nodeValue(argsProp.node) : undefined;
+    button = {
+      kind: 'command',
+      id: id ?? derivedId('vscode', vscodeId, args === undefined ? undefined : JSON.stringify(args)),
+      ...base,
+      vscode: vscodeId,
+      ...(args !== undefined ? { args } : {}),
     };
   } else {
     const cwd = text('cwd');

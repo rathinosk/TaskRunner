@@ -24,7 +24,7 @@ describe('core/config', () => {
       assert.deepStrictEqual(issues, []);
       assert.ok(config);
       assert.deepStrictEqual(
-        config.buttons.map((b) => [b.kind, b.kind === 'task' ? b.task : b.kind === 'shell' ? b.command : b.group]),
+        config.buttons.map((b) => [b.kind, b.kind === 'task' ? b.task : b.kind === 'shell' ? b.command : b.kind === 'command' ? b.vscode : b.group]),
         [
           ['task', 'build'],
           ['task', 'test'],
@@ -48,6 +48,34 @@ describe('core/config', () => {
       assert.notStrictEqual(a[2], a[0]);
       const again = parseConfig('{"buttons":[{"task":"y"},{"task":"x"}]}').config!.buttons.map((b) => b.id);
       assert.deepStrictEqual(again, [a[2], a[0]]);
+    });
+
+    it('reads VS Code command buttons with any JSON args, as written', () => {
+      const { config, issues } = parseConfig(`{"buttons":[
+        {"vscode":"workbench.action.files.saveAll"},
+        {"vscode":"a.b","args":"build"},
+        {"vscode":"a.b","args":{"snippet":"$0","n":[1,true,null]}},
+        {"vscode":"a.b","args":3},
+        {"vscode":"a.b","args":null}
+      ]}`);
+      assert.deepStrictEqual(issues, []);
+      const all = config!.buttons.map((b) => (b.kind === 'command' ? [b.vscode, b.args] : b.kind));
+      assert.deepStrictEqual(all, [
+        ['workbench.action.files.saveAll', undefined],
+        ['a.b', 'build'],
+        ['a.b', { snippet: '$0', n: [1, true, null] }],
+        ['a.b', 3],
+        ['a.b', null],
+      ]);
+      assert.ok(!('args' in config!.buttons[0]!));
+    });
+
+    it('derives a command button id from the command and its args', () => {
+      const ids = (json: string) => parseConfig(json).config!.buttons.map((b) => b.id);
+      const [a, b, c] = ids('{"buttons":[{"vscode":"x"},{"vscode":"x","args":1},{"vscode":"x","args":2}]}');
+      assert.match(a!, /^vscode-[0-9a-f]{8}$/);
+      assert.strictEqual(new Set([a, b, c]).size, 3);
+      assert.deepStrictEqual(ids('{"buttons":[{"vscode":"x","args":1,"label":"L"}]}'), [b]);
     });
 
     it('accepts an empty button list', () => {
@@ -79,9 +107,12 @@ describe('core/config', () => {
       }
     });
 
-    it('needs exactly one of task and command', () => {
+    it('needs exactly one of task, command, vscode and group', () => {
       assert.match(errors('{"buttons":[{}]}')[0]!.message, /needs "task"/);
-      assert.match(errors('{"buttons":[{"task":"a","command":"b"}]}')[0]!.message, /not both/);
+      assert.match(errors('{"buttons":[{"task":"a","command":"b"}]}')[0]!.message, /not "task" and "command"/);
+      assert.match(errors('{"buttons":[{"vscode":"a","command":"b"}]}')[0]!.message, /not "command" and "vscode"/);
+      assert.match(errors('{"buttons":[{"group":"g","buttons":[],"vscode":"a"}]}')[0]!.message, /not "group" and "vscode"/);
+      assert.strictEqual(errors('{"buttons":[{"vscode":""}]}').length, 1);
       assert.match(errors('{"buttons":["x"]}')[0]!.message, /must be an object/);
     });
 
@@ -131,6 +162,21 @@ describe('core/config', () => {
         ['buttons[0].cwd', 'buttons[0].icon', 'buttons[1].source'],
       );
       assert.strictEqual(config.buttons[0]?.icon, undefined);
+    });
+
+    it('warns on args outside a command button, and on run keys on one', () => {
+      const { config, issues } = parseConfig('{"buttons":[{"command":"a","args":1},{"vscode":"b","cwd":"x","source":"npm"},{"group":"g","buttons":[],"args":1}]}');
+      assert.ok(config);
+      assert.deepStrictEqual(
+        issues.map((i) => [i.severity, i.path]),
+        [
+          ['warning', 'buttons[0].args'],
+          ['warning', 'buttons[1].source'],
+          ['warning', 'buttons[1].cwd'],
+          ['warning', 'buttons[2].args'],
+        ],
+      );
+      assert.ok(!('args' in config.buttons[0]!));
     });
 
     it('accepts Codicon, image path and emoji icons without a warning', () => {

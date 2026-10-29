@@ -5,6 +5,7 @@ import { parseConfig, type ConfigIssue } from '../core/config';
 import { CONFIG_FILE } from '../core/configText';
 import { mergeButtons, type FolderConfig } from '../core/merge';
 import type { ErrorView } from '../core/protocol';
+import { listCommands } from './commandSource';
 import { openAt, readConfigs } from './configSource';
 import { knownCodicons } from './icons';
 import type { GridState } from './gridView';
@@ -33,7 +34,7 @@ export class GridModel {
   /** Re-read everything. A newer refresh supersedes an older one still in flight. */
   async refresh(): Promise<GridState | undefined> {
     const mine = ++this.generation;
-    const [files, tasks] = await Promise.all([readConfigs(), listTasks()]);
+    const [files, tasks, commands] = await Promise.all([readConfigs(), listTasks(), listCommands()]);
     if (mine !== this.generation) return undefined;
 
     const errors: ErrorView[] = [];
@@ -60,7 +61,7 @@ export class GridModel {
 
     const configs = files.flatMap((f) => this.lastGood.get(f.folder.name) ?? []);
     const state: GridState = {
-      buttons: mergeButtons(configs, tasks, { trusted: vscode.workspace.isTrusted }),
+      buttons: mergeButtons(configs, tasks, { trusted: vscode.workspace.isTrusted, commands }),
       errors,
       needsConfig: files.length > 0 && files.every((f) => f.text === undefined),
     };

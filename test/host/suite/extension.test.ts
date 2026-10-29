@@ -6,7 +6,7 @@ import type { HostToWebview } from '../../../src/core/protocol';
 import type { GridButton, ShellButton } from '../../../src/host/buttons';
 import { GridViewProvider, type GridState } from '../../../src/host/gridView';
 import { GridModel } from '../../../src/host/model';
-import { runShellButton } from '../../../src/host/run';
+import { runButton, runShellButton } from '../../../src/host/run';
 import { RunTracker } from '../../../src/host/runTracker';
 import { findTask, listTasks, runTaskById } from '../../../src/host/taskSource';
 
@@ -236,6 +236,29 @@ describe('host/model', () => {
       ],
     );
     assert.strictEqual(state?.needsConfig, false);
+  });
+
+  it('runs VS Code command buttons with their args as written, and marks an unknown command missing', async () => {
+    const calls: unknown[][] = [];
+    const sub = vscode.commands.registerCommand('taskrunner.test.record', (...args: unknown[]) => calls.push(args));
+    try {
+      await write('{ "buttons": [ { "vscode": "taskrunner.test.record" }, { "vscode": "taskrunner.test.record", "args": { "a": [1, null], "s": "${workspaceFolder}" } }, { "vscode": "taskrunner.test.nope" } ] }');
+      const { model } = setup();
+      const state = await model.refresh();
+      model.dispose();
+      assert.deepStrictEqual(
+        state?.buttons.map((b) => [b.kind, b.state]),
+        [
+          ['command', 'ok'],
+          ['command', 'ok'],
+          ['command', 'missing'],
+        ],
+      );
+      for (const b of state!.buttons.slice(0, 2)) await runButton(b);
+      assert.deepStrictEqual(calls, [[], [{ a: [1, null], s: '${workspaceFolder}' }]]);
+    } finally {
+      sub.dispose();
+    }
   });
 
   it('keeps the last good grid on a broken edit and reports the line, then recovers', async () => {

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { parseConfig } from '../../src/core/config';
-import { CONFIG_TEMPLATE, configFromTasks, taskValuePrefix } from '../../src/core/configText';
+import { CONFIG_TEMPLATE, configFromTasks, taskValuePrefix, valuePrefix } from '../../src/core/configText';
 
 describe('core/configText', () => {
   it('the starter template is a valid, empty config', () => {
@@ -42,5 +42,12 @@ describe('core/configText', () => {
     assert.strictEqual(taskValuePrefix('{ "task": "done", "label": "x'), undefined);
     assert.strictEqual(taskValuePrefix('{ "command": "ta'), undefined);
     assert.strictEqual(taskValuePrefix('{ "task": '), undefined);
+  });
+
+  it('finds what is typed inside any key\'s value', () => {
+    assert.strictEqual(valuePrefix('    { "vscode": "workbench.', 'vscode'), 'workbench.');
+    assert.strictEqual(valuePrefix('{"vscode":"', 'vscode'), '');
+    assert.strictEqual(valuePrefix('{ "task": "wo', 'vscode'), undefined);
+    assert.strictEqual(valuePrefix('{ "vscode": "a", "label": "x', 'vscode'), undefined);
   });
 });

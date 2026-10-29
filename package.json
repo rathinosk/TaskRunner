@@ -1,8 +1,8 @@
 {
   "name": "vscode-task-runner",
   "displayName": "VSCode Task Runner",
-  "description": "A sidebar grid of big, labelled buttons that run your tasks and shell commands.",
-  "version": "0.0.2",
+  "description": "A sidebar grid of big, labelled buttons that run your tasks, shell commands and VS Code commands.",
+  "version": "0.1.0",
   "publisher": "Rathinosk",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -20,6 +20,20 @@
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "task runner",
+    "tasks",
+    "tasks.json",
+    "run task",
+    "shell commands",
+    "command runner",
+    "vscode commands",
+    "buttons",
+    "sidebar",
+    "productivity",
+    "developer tools",
+    "workflow"
   ],
   "main": "./dist/extension.js",
   "capabilities": {

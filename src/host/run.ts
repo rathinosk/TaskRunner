@@ -31,6 +31,16 @@ export function runShellButton(button: ShellButton): Thenable<vscode.TaskExecuti
   return vscode.tasks.executeTask(shellTask(button));
 }
 
+/** As a keybinding runs it: `args`, when given, is the one argument (ADR-0007). */
+async function runCommandButton(button: GridButton): Promise<void> {
+  const { id, args } = button.vscodeCommand!;
+  try {
+    await vscode.commands.executeCommand(id, ...(args !== undefined ? [args] : []));
+  } catch (e) {
+    void vscode.window.showErrorMessage(`Task Runner: "${button.label}" failed (command ${id}): ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 /**
  * What a click on a grid button does: explain a broken one; for a running one, show its terminal
  * (or restart it on Ctrl/Cmd+click); else ask first when `confirm`, then run.
@@ -53,11 +63,12 @@ export async function runButton(button: GridButton, opts: { restart: boolean } =
   }
   if (button.confirm) {
     const run = 'Run';
-    const detail = button.shell ? button.shell.command : button.label;
+    const detail = button.shell ? button.shell.command : button.vscodeCommand ? button.vscodeCommand.id : button.label;
     const pick = await vscode.window.showWarningMessage(`Run "${button.label}"?`, { modal: true, detail }, run);
     if (pick !== run) return;
   }
   const shell = shellButtonOf(button);
   if (shell) await runShellButton(shell);
+  else if (button.vscodeCommand) await runCommandButton(button);
   else if (button.taskId) await runTaskById(button.taskId);
 }

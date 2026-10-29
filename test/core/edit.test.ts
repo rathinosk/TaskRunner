@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { parseConfig, walkButtons } from '../../src/core/config';
-import { addEntries, groupEntry, minimalEdit, moveButton, nudge, removeAt, setProperty, shellEntry, slugId, taskEntry, valueAt } from '../../src/core/edit';
+import { addEntries, commandEntry, groupEntry, minimalEdit, moveButton, nudge, removeAt, setProperty, shellEntry, slugId, taskEntry, valueAt } from '../../src/core/edit';
 
 const FILE = `{
   // Buttons for my project.
@@ -20,7 +20,7 @@ const FILE = `{
 const labels = (text: string): string[] => {
   const { config, issues } = parseConfig(text);
   assert.deepStrictEqual(issues.filter((i) => i.severity === 'error'), []);
-  return walkButtons(config!.buttons).map((b) => (b.kind === 'task' ? b.task : b.kind === 'shell' ? b.command : `[${b.group}]`));
+  return walkButtons(config!.buttons).map((b) => (b.kind === 'task' ? b.task : b.kind === 'shell' ? b.command : b.kind === 'command' ? b.vscode : `[${b.group}]`));
 };
 
 describe('core/edit', () => {
@@ -29,6 +29,16 @@ describe('core/edit', () => {
     assert.deepStrictEqual(labels(out), ['build', 'test', '[Docs]', 'doxygen', 'echo hi', 'lint', 'ls']);
     for (const c of ['// Buttons for my project.', '// build first', '// the main one', '/* docs */', '// inner comment']) assert.ok(out.includes(c), c);
     assert.strictEqual(valueAt(out, ['buttons', 4, 'source']), 'npm');
+  });
+
+  it('adds a VS Code command button with nested args, keeping comments', () => {
+    const args = { snippet: '// $0', list: [1, { a: null }] };
+    const out = addEntries(FILE, ['buttons'], [commandEntry({ vscode: 'editor.action.insertSnippet', args, label: 'Todo', icon: '' }), commandEntry({ vscode: 'x.y' })]);
+    assert.deepStrictEqual(labels(out), ['build', 'test', '[Docs]', 'doxygen', 'echo hi', 'editor.action.insertSnippet', 'x.y']);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(valueAt(out, ['buttons', 4]))), { vscode: 'editor.action.insertSnippet', args, label: 'Todo' });
+    assert.strictEqual(valueAt(out, ['buttons', 5, 'vscode']), 'x.y');
+    assert.strictEqual(valueAt(out, ['buttons', 5, 'args']), undefined);
+    for (const c of ['// build first', '// the main one', '/* docs */']) assert.ok(out.includes(c), c);
   });
 
   it('adds into a group', () => {

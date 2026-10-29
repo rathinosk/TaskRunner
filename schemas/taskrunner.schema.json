@@ -22,7 +22,7 @@
   "definitions": {
     "button": {
       "type": "object",
-      "description": "A button that runs a task from tasks.json (or a task provider), runs a shell command, or opens a group of more buttons.",
+      "description": "A button that runs a task from tasks.json (or a task provider), runs a shell command, runs a VS Code command, or opens a group of more buttons.",
       "oneOf": [
         {
           "required": [
@@ -32,6 +32,11 @@
         {
           "required": [
             "command"
+          ]
+        },
+        {
+          "required": [
+            "vscode"
           ]
         },
         {
@@ -87,6 +92,14 @@
           "type": "string",
           "description": "Only for \"command\". Shell executable to use instead of the default, e.g. \"bash\"."
         },
+        "vscode": {
+          "type": "string",
+          "minLength": 1,
+          "description": "VS Code command id to run, as in keybindings.json, e.g. \"workbench.action.files.saveAll\". Anything in the Command Palette works."
+        },
+        "args": {
+          "description": "Only for \"vscode\". Argument passed to the command, as in keybindings.json: any JSON value, passed as written (no ${...} variables)."
+        },
         "id": {
           "type": "string",
           "pattern": "^[A-Za-z0-9_.-]{1,64}$",
@@ -94,11 +107,11 @@
         },
         "label": {
           "type": "string",
-          "description": "Text under the icon. Defaults to the task label or the command."
+          "description": "Text under the icon. Defaults to the task label, the command, or the VS Code command's title."
         },
         "icon": {
           "type": "string",
-          "description": "Codicon name (e.g. \"tools\", \"beaker\", \"rocket\"), a workspace-relative image (\"./icons/build.svg\" or \".png\"), or an emoji. Defaults by task group; a group defaults to \"folder\"."
+          "description": "Codicon name (e.g. \"tools\", \"beaker\", \"rocket\"), a workspace-relative image (\"./icons/build.svg\" or \".png\"), or an emoji. Defaults by task group; a VS Code command defaults to \"symbol-event\", a group to \"folder\"."
         },
         "tooltip": {
           "type": "string",

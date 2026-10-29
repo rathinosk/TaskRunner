@@ -2,9 +2,11 @@
 // then follows through the file watcher like any other edit (one path, no second source of truth).
 import * as vscode from 'vscode';
 import { parseConfig, walkButtons, type JsonPath } from '../core/config';
-import { addEntries, EditError, groupEntry, minimalEdit, moveButton, nudge, offsetAt, removeAt, setProperty, shellEntry, slugId, taskEntry } from '../core/edit';
+import { addEntries, commandEntry, EditError, groupEntry, minimalEdit, moveButton, nudge, offsetAt, removeAt, setProperty, shellEntry, slugId, taskEntry } from '../core/edit';
+import { parseJsonc } from '../core/jsonc';
 import { isButtonId } from '../core/protocol';
 import type { GridButton } from './buttons';
+import { listCommands } from './commandSource';
 import { configUri, ensureConfig, pickFolder } from './configSource';
 import type { GridViewProvider } from './gridView';
 import { pickIcon } from './iconPicker';
@@ -82,7 +84,7 @@ export class GridEditor {
     return id === undefined ? undefined : this.grid.findButton(id);
   }
 
-  /** Add to the open group, or to the top: tasks (several), a shell command or a group. */
+  /** Add to the open group, or to the top: tasks (several), a shell command, a VS Code command or a group. */
   async add(): Promise<void> {
     const group = this.grid.location;
     const folder = group ? folderOf(group) : await pickFolder('Add to which folder?');
@@ -94,12 +96,14 @@ export class GridEditor {
       [
         { label: '$(tasklist) Tasks...', description: 'from tasks.json and task providers', what: 'tasks' as const },
         { label: '$(terminal) Shell command...', description: 'any command line', what: 'shell' as const },
+        { label: '$(symbol-event) VS Code command...', description: 'anything in the Command Palette, with optional args', what: 'command' as const },
         { label: '$(folder) New group...', description: 'a folder of buttons', what: 'group' as const },
       ],
       { placeHolder: group ? `Add to ${group.label}` : 'Add to the grid' },
     );
     if (choice?.what === 'tasks') await this.addTasks(folder, list, expect);
     else if (choice?.what === 'shell') await this.addShell(folder, list, expect);
+    else if (choice?.what === 'command') await this.addCommand(folder, list, expect);
     else if (choice?.what === 'group') await this.addGroup(folder, list, expect);
   }
 
@@ -132,6 +136,22 @@ export class GridEditor {
     const icon = await pickIcon(folder, { allowDefault: true });
     if (icon === undefined) return;
     await editConfig(folder, (text) => addEntries(text, list, [shellEntry({ command: command.trim(), label: label.trim(), icon })]), expect);
+  }
+
+  private async addCommand(folder: vscode.WorkspaceFolder, list: JsonPath, expect: Expect[]): Promise<void> {
+    const id = await pickCommandId();
+    if (id === undefined) return;
+    const argsText = await vscode.window.showInputBox({
+      prompt: `Argument for ${id}, as JSON (optional; e.g. "build" or { "snippet": "$0" })`,
+      validateInput: (v) => (v.trim() === '' || parseJsonc(v) !== undefined ? undefined : 'Not valid JSON. Strings need quotes: "build"'),
+    });
+    if (argsText === undefined) return;
+    const label = await vscode.window.showInputBox({ prompt: 'Label under the icon (optional; empty uses the command title)' });
+    if (label === undefined) return;
+    const icon = await pickIcon(folder, { allowDefault: true });
+    if (icon === undefined) return;
+    const args = argsText.trim() === '' ? undefined : parseJsonc(argsText);
+    await editConfig(folder, (text) => addEntries(text, list, [commandEntry({ vscode: id, args, label: label.trim(), icon })]), expect);
   }
 
   private async addGroup(folder: vscode.WorkspaceFolder, list: JsonPath, expect: Expect[]): Promise<void> {
@@ -219,4 +239,36 @@ export class GridEditor {
     if (!b || !folder) return;
     await editConfig(folder, (t) => nudge(t, b.path, delta), [expectOf(b)]);
   }
+}
+
+/** A command id from the known commands, titled ones first; or whatever id is typed. */
+async function pickCommandId(): Promise<string | undefined> {
+  type Item = vscode.QuickPickItem & { id: string };
+  const items: Item[] = [...(await listCommands())]
+    .filter(([id]) => !id.startsWith('_'))
+    .map(([id, title]) => ({ label: title ?? id, description: title ? id : undefined, id }))
+    .sort((a, b) => Number(a.description === undefined) - Number(b.description === undefined) || a.label.localeCompare(b.label));
+  const qp = vscode.window.createQuickPick<Item>();
+  qp.placeholder = 'Pick a command, or type a command id';
+  qp.matchOnDescription = true;
+  qp.items = items;
+  const typed = (): Item | undefined => {
+    const v = qp.value.trim();
+    return v && !items.some((i) => i.id === v) ? { label: v, description: 'Use this command id', alwaysShow: true, id: v } : undefined;
+  };
+  qp.onDidChangeValue(() => {
+    const t = typed();
+    qp.items = t ? [t, ...items] : items;
+  });
+  return new Promise<string | undefined>((resolve) => {
+    qp.onDidAccept(() => {
+      resolve(qp.selectedItems[0]?.id ?? typed()?.id);
+      qp.hide();
+    });
+    qp.onDidHide(() => {
+      resolve(undefined);
+      qp.dispose();
+    });
+    qp.show();
+  });
 }

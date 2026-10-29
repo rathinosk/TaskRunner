@@ -5,10 +5,12 @@ export const CONFIG_FILE = 'taskrunner.json';
 
 export const CONFIG_TEMPLATE = `{
   // Buttons for the Task Runner sidebar, in the order shown.
-  // "task" names a task as listed in Terminal > Run Task; "command" runs a shell command.
+  // "task" names a task as listed in Terminal > Run Task; "command" runs a shell command;
+  // "vscode" runs a VS Code command, with an optional "args" as in keybindings.json.
   "buttons": [
     // { "task": "build", "label": "Build", "icon": "tools" },
     // { "command": "echo hello", "label": "Hello", "icon": "terminal" },
+    // { "vscode": "workbench.action.files.saveAll", "label": "Save all", "icon": "save-all" },
     // { "task": "deploy", "icon": "cloud-upload", "confirm": true }
   ]
 }
@@ -26,10 +28,14 @@ export function configFromTasks(tasks: readonly Pick<TaskInfo, 'label' | 'source
 }
 
 /**
- * Inside the string value of a `"task"` property on this line? `linePrefix` is the line text
+ * Inside the string value of a `"<key>"` property on this line? `linePrefix` is the line text
  * before the cursor. Returns what is typed of the value so far.
  */
-export function taskValuePrefix(linePrefix: string): string | undefined {
-  const m = /"task"\s*:\s*"((?:[^"\\]|\\.)*)$/.exec(linePrefix);
+export function valuePrefix(linePrefix: string, key: string): string | undefined {
+  const m = new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)$`).exec(linePrefix);
   return m ? m[1] : undefined;
+}
+
+export function taskValuePrefix(linePrefix: string): string | undefined {
+  return valuePrefix(linePrefix, 'task');
 }

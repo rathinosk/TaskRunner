@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { taskCompletion } from './completion';
+import { commandCompletion, taskCompletion } from './completion';
 import { createConfig, openConfig, pickTasksToConfig } from './configSource';
 import { GridEditor } from './editing';
 import { normalizeSettings } from '../core/settings';
@@ -73,11 +73,14 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('taskrunner.removeButton', (arg: unknown) => editor.remove(arg)),
     vscode.window.registerWebviewViewProvider(GridViewProvider.viewId, grid),
     vscode.languages.registerCompletionItemProvider({ scheme: 'file', pattern: '**/.vscode/taskrunner.json' }, taskCompletion, '"'),
+    vscode.languages.registerCompletionItemProvider({ scheme: 'file', pattern: '**/.vscode/taskrunner.json' }, commandCompletion, '"'),
     watcher,
     watcher.onDidChange(scheduleRefresh),
     watcher.onDidCreate(scheduleRefresh),
     watcher.onDidDelete(scheduleRefresh),
     vscode.workspace.onDidChangeWorkspaceFolders(scheduleRefresh),
+    // Command buttons are missing until an extension that provides their command is installed.
+    vscode.extensions.onDidChange(scheduleRefresh),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('taskRunner')) readSettings();
     }),

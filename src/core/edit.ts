@@ -187,6 +187,15 @@ export function shellEntry(s: { command: string; label?: string; icon?: string }
   return { command: s.command, ...(s.label ? { label: s.label } : {}), ...(s.icon ? { icon: s.icon } : {}) };
 }
 
+export function commandEntry(c: { vscode: string; args?: unknown; label?: string; icon?: string }): Entry {
+  return {
+    vscode: c.vscode,
+    ...(c.args !== undefined ? { args: c.args } : {}),
+    ...(c.label ? { label: c.label } : {}),
+    ...(c.icon ? { icon: c.icon } : {}),
+  };
+}
+
 export function groupEntry(name: string, id: string, icon?: string): Entry {
   return { group: name, id, ...(icon ? { icon } : {}), buttons: [] };
 }

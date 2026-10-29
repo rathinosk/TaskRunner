@@ -183,6 +183,20 @@ export function parseJsoncTree(text: string): JsoncTree {
   }
 }
 
+/** The plain JSON value of a node. */
+export function nodeValue(node: JsonNode): unknown {
+  switch (node.kind) {
+    case 'object':
+      return Object.fromEntries(node.props.map((p) => [p.key, nodeValue(p.value)]));
+    case 'array':
+      return node.items.map(nodeValue);
+    case 'null':
+      return null;
+    default:
+      return node.value;
+  }
+}
+
 /** 0-based line and column of an offset. */
 export function positionAt(text: string, offset: number): { line: number; column: number } {
   let line = 0;

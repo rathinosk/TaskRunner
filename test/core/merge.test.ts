@@ -71,6 +71,37 @@ describe('core/merge', () => {
     assert.match(s!.tooltip, /Run: make all\nIn: sub/);
   });
 
+  it('makes VS Code command buttons, titled when the title is known', () => {
+    const commands = new Map<string, string | undefined>([['a.save', 'File: Save All'], ['a.bare', undefined]]);
+    const merged = mergeButtons(
+      [{ folder: 'f', buttons: buttons('{"buttons":[{"vscode":"a.save","args":{"x":1}},{"vscode":"a.bare","confirm":true},{"vscode":"a.save","label":"S","icon":"save"}]}') }],
+      tasks,
+      { trusted: true, commands },
+    );
+    assert.deepStrictEqual(
+      merged.map((b) => [b.kind, b.label, b.icon, b.state, b.vscodeCommand]),
+      [
+        ['command', 'File: Save All', 'symbol-event', 'ok', { id: 'a.save', args: { x: 1 } }],
+        ['command', 'a.bare', 'symbol-event', 'ok', { id: 'a.bare' }],
+        ['command', 'S', 'save', 'ok', { id: 'a.save' }],
+      ],
+    );
+    assert.strictEqual(merged[0]!.tooltip, 'Run command: File: Save All (a.save)');
+    assert.strictEqual(merged[1]!.tooltip, 'Run command: a.bare\nAsks before running.');
+  });
+
+  it('marks a command button missing when its id is not known, and untrusted like the rest', () => {
+    const json = '{"buttons":[{"vscode":"no.such"},{"vscode":"a.b"}]}';
+    const [missing, unchecked] = mergeButtons([{ folder: 'f', buttons: buttons(json) }], tasks, { trusted: true, commands: new Map([['a.b', undefined]]) });
+    assert.deepStrictEqual([missing?.state, missing?.icon, unchecked?.state], ['missing', 'warning', 'ok']);
+    assert.match(missing!.tooltip, /"no.such" was not found/);
+    const untrusted = mergeButtons([{ folder: 'f', buttons: buttons(json) }], tasks, { trusted: false });
+    assert.deepStrictEqual(
+      untrusted.map((b) => b.state),
+      ['untrusted', 'untrusted'],
+    );
+  });
+
   it('merges several folders in the order given, preferring a task in the config\'s own folder', () => {
     const multi = [task('build', 'Workspace', 'a'), task('build', 'Workspace', 'b')];
     const merged = mergeButtons(

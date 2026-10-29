@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { parseJsoncTree, positionAt } from '../../src/core/jsonc';
+import { nodeValue, parseJsoncTree, positionAt } from '../../src/core/jsonc';
 
 describe('core/jsonc parseJsoncTree', () => {
   it('parses values with offsets, comments and trailing commas', () => {
@@ -56,5 +56,12 @@ describe('core/jsonc positionAt', () => {
     assert.deepStrictEqual(positionAt(text, 4), { line: 1, column: 1 });
     assert.deepStrictEqual(positionAt(text, 7), { line: 2, column: 0 });
     assert.deepStrictEqual(positionAt(text, 99), { line: 2, column: 2 });
+  });
+});
+
+describe('core/jsonc nodeValue', () => {
+  it('turns a tree back into the plain value', () => {
+    const { root } = parseJsoncTree('{ "a": [1, true, null, "s"], /* c */ "b": { "c": {}, "d": [] }, }');
+    assert.deepStrictEqual(nodeValue(root!), { a: [1, true, null, 's'], b: { c: {}, d: [] } });
   });
 });
